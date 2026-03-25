@@ -26,6 +26,13 @@ function IPodDevice() {
         return;
       }
 
+      // Games: scroll = change snake direction
+      if (currentRoute.route === 'Games') {
+        if (direction === 'up') (globalThis as any).__snake?.up();
+        else (globalThis as any).__snake?.down();
+        return;
+      }
+
       const items = getMenuItemsForRoute(currentRoute.route, currentRoute.params);
       const count = items.length;
       if (count === 0) return;
@@ -42,6 +49,17 @@ function IPodDevice() {
     (zone: WheelTapZone) => {
       switch (zone) {
         case 'select': {
+          // Stopwatch: select = lap/reset
+          if (currentRoute.route === 'Stopwatch') {
+            (globalThis as any).__stopwatch?.lapOrReset();
+            return;
+          }
+          // Games: select = restart when game over
+          if (currentRoute.route === 'Games') {
+            (globalThis as any).__snake?.restart();
+            return;
+          }
+
           // Settings toggles (shuffle, repeat)
           if (currentRoute.route === 'Settings') {
             const items = getMenuItemsForRoute(currentRoute.route, currentRoute.params);
@@ -143,17 +161,25 @@ function IPodDevice() {
           pop();
           break;
         case 'play_pause':
-          if (currentTrack) {
+          if (currentRoute.route === 'Stopwatch') {
+            (globalThis as any).__stopwatch?.toggle();
+          } else if (currentRoute.route === 'Games') {
+            (globalThis as any).__snake?.togglePause();
+          } else if (currentTrack) {
             togglePlayPause();
           }
           break;
         case 'forward':
-          if (currentTrack) {
+          if (currentRoute.route === 'Games') {
+            (globalThis as any).__snake?.right();
+          } else if (currentTrack) {
             next();
           }
           break;
         case 'back':
-          if (currentTrack) {
+          if (currentRoute.route === 'Games') {
+            (globalThis as any).__snake?.left();
+          } else if (currentTrack) {
             previous();
           }
           break;

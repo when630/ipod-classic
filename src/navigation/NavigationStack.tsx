@@ -8,6 +8,10 @@ import { MenuScreen, MAIN_MENU_ITEMS } from '@/components/screens/MenuScreen';
 import { NowPlayingScreen } from '@/components/screens/NowPlayingScreen';
 import { CoverFlowScreen } from '@/components/screens/CoverFlowScreen';
 import { AboutScreen } from '@/components/screens/AboutScreen';
+import { ClockScreen } from '@/components/screens/ClockScreen';
+import { StopwatchScreen } from '@/components/screens/StopwatchScreen';
+import { GamesScreen } from '@/components/screens/GamesScreen';
+import { ContactsScreen, CONTACTS_LIST } from '@/components/screens/ContactsScreen';
 import { themes } from '@/theme/colors';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import type { MenuItemData } from '@/components/screens/MenuScreen';
@@ -19,6 +23,31 @@ const MUSIC_MENU_ITEMS: MenuItemData[] = [
   { id: 'albums', label: 'Albums' },
   { id: 'songs', label: 'Songs' },
   { id: 'now_playing', label: 'Now Playing' },
+];
+
+const PHOTOS_MENU_ITEMS: MenuItemData[] = [
+  { id: 'slideshows', label: 'Slideshows' },
+  { id: 'photo_library', label: 'Photo Library', hasChildren: false },
+];
+
+const SLIDESHOWS_ITEMS: MenuItemData[] = [
+  { id: 'slideshow_all', label: 'All Photos', hasChildren: false },
+  { id: 'slideshow_albums', label: 'Albums', hasChildren: false },
+];
+
+const VIDEOS_MENU_ITEMS: MenuItemData[] = [
+  { id: 'movies', label: 'Movies', hasChildren: false },
+  { id: 'music_videos', label: 'Music Videos', hasChildren: false },
+  { id: 'tv_shows', label: 'TV Shows', hasChildren: false },
+  { id: 'video_playlists', label: 'Video Playlists', hasChildren: false },
+];
+
+const EXTRAS_MENU_ITEMS: MenuItemData[] = [
+  { id: 'clock', label: 'Clock' },
+  { id: 'stopwatch', label: 'Stopwatch' },
+  { id: 'contacts', label: 'Contacts' },
+  { id: 'games', label: 'Games' },
+  { id: 'screen_lock', label: 'Screen Lock', hasChildren: false },
 ];
 
 function getSettingsItems(): MenuItemData[] {
@@ -44,6 +73,14 @@ export function getMenuItemsForRoute(
       return MAIN_MENU_ITEMS;
     case 'Music':
       return MUSIC_MENU_ITEMS;
+    case 'Photos':
+      return PHOTOS_MENU_ITEMS;
+    case 'Slideshows':
+      return SLIDESHOWS_ITEMS;
+    case 'Videos':
+      return VIDEOS_MENU_ITEMS;
+    case 'Extras':
+      return EXTRAS_MENU_ITEMS;
     case 'Settings':
       return getSettingsItems();
     case 'Artists':
@@ -72,11 +109,16 @@ export function getMenuItemsForRoute(
       }));
     }
     case 'CoverFlow':
-      // Return albums so IPodApp knows the item count for scroll bounds
       return albums.map((a) => ({
         id: a.id,
         label: a.title,
         hasChildren: true,
+      }));
+    case 'Contacts':
+      return CONTACTS_LIST.map((c) => ({
+        id: c.id,
+        label: c.name,
+        hasChildren: false,
       }));
     case 'ThemeSelect':
       return Object.entries(themes).map(([key, t]) => ({
@@ -93,14 +135,14 @@ function getScreenTitle(route: Route, params?: Record<string, unknown>): string 
   const { artists, albums } = useLibraryStore.getState();
 
   switch (route) {
-    case 'MainMenu':
-      return 'iPod';
-    case 'Music':
-      return 'Music';
-    case 'Settings':
-      return 'Settings';
-    case 'Artists':
-      return 'Artists';
+    case 'MainMenu':     return 'iPod';
+    case 'Music':        return 'Music';
+    case 'Photos':       return 'Photos';
+    case 'Slideshows':   return 'Slideshows';
+    case 'Videos':       return 'Videos';
+    case 'Extras':       return 'Extras';
+    case 'Settings':     return 'Settings';
+    case 'Artists':      return 'Artists';
     case 'Albums': {
       const artistId = params?.artistId as string | undefined;
       if (artistId) {
@@ -117,16 +159,15 @@ function getScreenTitle(route: Route, params?: Record<string, unknown>): string 
       }
       return 'Songs';
     }
-    case 'NowPlaying':
-      return 'Now Playing';
-    case 'CoverFlow':
-      return 'Cover Flow';
-    case 'ThemeSelect':
-      return 'Theme';
-    case 'About':
-      return 'About';
-    default:
-      return '';
+    case 'NowPlaying':   return 'Now Playing';
+    case 'CoverFlow':    return 'Cover Flow';
+    case 'Clock':        return 'Clock';
+    case 'Stopwatch':    return 'Stopwatch';
+    case 'Games':        return 'Games';
+    case 'Contacts':     return 'Contacts';
+    case 'ThemeSelect':  return 'Theme';
+    case 'About':        return 'About';
+    default:             return '';
   }
 }
 
@@ -141,6 +182,12 @@ function renderScreen(
       return <NowPlayingScreen />;
     case 'CoverFlow':
       return <CoverFlowScreen selectedIndex={selectedIndex} />;
+    case 'Clock':
+      return <ClockScreen />;
+    case 'Stopwatch':
+      return <StopwatchScreen />;
+    case 'Games':
+      return <GamesScreen />;
     case 'About':
       return <AboutScreen />;
     default:
@@ -153,7 +200,6 @@ export function NavigationStack() {
   const slideAnim = useRef(new RNAnimated.Value(0)).current;
   const prevRouteRef = useRef(currentRoute.key);
 
-  // Load library on mount
   const loadLibrary = useLibraryStore((s) => s.loadLibrary);
   useEffect(() => {
     loadLibrary();
