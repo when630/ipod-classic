@@ -11,6 +11,7 @@ import { usePlayerStore } from '@/stores/usePlayerStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useTheme } from '@/theme/ThemeContext';
 import { useKeyboardControls } from '@/hooks/useKeyboardControls';
+import { findVideo } from '@/navigation/NavigationStack';
 import type { WheelTapZone } from '@/types';
 
 function IPodDevice() {
@@ -57,6 +58,19 @@ function IPodDevice() {
           // Games: select = restart when game over
           if (currentRoute.route === 'Games') {
             (globalThis as any).__snake?.restart();
+            return;
+          }
+
+          // Video lists: select = play video
+          if (currentRoute.route === 'MoviesList' || currentRoute.route === 'MusicVideosList' || currentRoute.route === 'TVShowsList') {
+            const items = getMenuItemsForRoute(currentRoute.route, currentRoute.params);
+            const selected = items[currentRoute.selectedIndex];
+            if (selected) {
+              const video = findVideo(selected.id);
+              if (video) {
+                push('VideoPlayer', { videoTitle: video.title, videoDuration: video.duration });
+              }
+            }
             return;
           }
 
@@ -161,7 +175,9 @@ function IPodDevice() {
           pop();
           break;
         case 'play_pause':
-          if (currentRoute.route === 'Stopwatch') {
+          if (currentRoute.route === 'VideoPlayer') {
+            (globalThis as any).__videoPlayer?.toggle();
+          } else if (currentRoute.route === 'Stopwatch') {
             (globalThis as any).__stopwatch?.toggle();
           } else if (currentRoute.route === 'Games') {
             (globalThis as any).__snake?.togglePause();

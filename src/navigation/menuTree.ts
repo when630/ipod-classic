@@ -17,12 +17,22 @@ const staticRouteMap: Record<string, Route> = {
 
   // Photos sub-menu
   slideshows: 'Slideshows',
+  photo_library: 'PhotoLibrary',
+  slideshow_all: 'SlideshowPlay',
+  slideshow_albums: 'SlideshowPlay',
+
+  // Videos sub-menu
+  movies: 'MoviesList',
+  music_videos: 'MusicVideosList',
+  tv_shows: 'TVShowsList',
+  video_playlists: 'VideoPlaylists',
 
   // Extras sub-menu
   clock: 'Clock',
   stopwatch: 'Stopwatch',
   contacts: 'Contacts',
   games: 'Games',
+  screen_lock: 'ScreenLock',
 
   // Settings sub-menu
   about: 'About',

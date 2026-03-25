@@ -12,6 +12,16 @@ import { ClockScreen } from '@/components/screens/ClockScreen';
 import { StopwatchScreen } from '@/components/screens/StopwatchScreen';
 import { GamesScreen } from '@/components/screens/GamesScreen';
 import { ContactsScreen, CONTACTS_LIST } from '@/components/screens/ContactsScreen';
+import { PhotoLibraryScreen } from '@/components/screens/PhotoLibraryScreen';
+import { SlideshowScreen } from '@/components/screens/SlideshowScreen';
+import {
+  VideoListScreen,
+  MOCK_MOVIES,
+  MOCK_MUSIC_VIDEOS,
+  MOCK_TV_SHOWS,
+} from '@/components/screens/VideoListScreen';
+import { VideoPlayerScreen } from '@/components/screens/VideoPlayerScreen';
+import { ScreenLockScreen } from '@/components/screens/ScreenLockScreen';
 import { themes } from '@/theme/colors';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import type { MenuItemData } from '@/components/screens/MenuScreen';
@@ -27,19 +37,24 @@ const MUSIC_MENU_ITEMS: MenuItemData[] = [
 
 const PHOTOS_MENU_ITEMS: MenuItemData[] = [
   { id: 'slideshows', label: 'Slideshows' },
-  { id: 'photo_library', label: 'Photo Library', hasChildren: false },
+  { id: 'photo_library', label: 'Photo Library' },
 ];
 
 const SLIDESHOWS_ITEMS: MenuItemData[] = [
-  { id: 'slideshow_all', label: 'All Photos', hasChildren: false },
-  { id: 'slideshow_albums', label: 'Albums', hasChildren: false },
+  { id: 'slideshow_all', label: 'All Photos' },
+  { id: 'slideshow_albums', label: 'Albums' },
 ];
 
 const VIDEOS_MENU_ITEMS: MenuItemData[] = [
-  { id: 'movies', label: 'Movies', hasChildren: false },
-  { id: 'music_videos', label: 'Music Videos', hasChildren: false },
-  { id: 'tv_shows', label: 'TV Shows', hasChildren: false },
+  { id: 'movies', label: 'Movies' },
+  { id: 'music_videos', label: 'Music Videos' },
+  { id: 'tv_shows', label: 'TV Shows' },
   { id: 'video_playlists', label: 'Video Playlists', hasChildren: false },
+];
+
+const VIDEO_PLAYLISTS_ITEMS: MenuItemData[] = [
+  { id: 'vp1', label: 'Recently Added', hasChildren: false },
+  { id: 'vp2', label: 'Favorites', hasChildren: false },
 ];
 
 const EXTRAS_MENU_ITEMS: MenuItemData[] = [
@@ -47,7 +62,7 @@ const EXTRAS_MENU_ITEMS: MenuItemData[] = [
   { id: 'stopwatch', label: 'Stopwatch' },
   { id: 'contacts', label: 'Contacts' },
   { id: 'games', label: 'Games' },
-  { id: 'screen_lock', label: 'Screen Lock', hasChildren: false },
+  { id: 'screen_lock', label: 'Screen Lock' },
 ];
 
 function getSettingsItems(): MenuItemData[] {
@@ -60,7 +75,6 @@ function getSettingsItems(): MenuItemData[] {
   ];
 }
 
-/** Get menu items for a given route (used by IPodApp to know item count) */
 export function getMenuItemsForRoute(
   route: Route,
   params?: Record<string, unknown>
@@ -79,53 +93,36 @@ export function getMenuItemsForRoute(
       return SLIDESHOWS_ITEMS;
     case 'Videos':
       return VIDEOS_MENU_ITEMS;
+    case 'MoviesList':
+      return MOCK_MOVIES.map((v) => ({ id: v.id, label: v.title, value: v.duration, hasChildren: false }));
+    case 'MusicVideosList':
+      return MOCK_MUSIC_VIDEOS.map((v) => ({ id: v.id, label: v.title, value: v.duration, hasChildren: false }));
+    case 'TVShowsList':
+      return MOCK_TV_SHOWS.map((v) => ({ id: v.id, label: v.title, value: v.duration, hasChildren: false }));
+    case 'VideoPlaylists':
+      return VIDEO_PLAYLISTS_ITEMS;
     case 'Extras':
       return EXTRAS_MENU_ITEMS;
     case 'Settings':
       return getSettingsItems();
     case 'Artists':
-      return artists.map((a) => ({
-        id: a.id,
-        label: a.name,
-        value: `${a.albumCount}`,
-      }));
+      return artists.map((a) => ({ id: a.id, label: a.name, value: `${a.albumCount}` }));
     case 'Albums': {
       const artistId = params?.artistId as string | undefined;
       const list = artistId ? getAlbumsByArtist(artistId) : albums;
-      return list.map((a) => ({
-        id: a.id,
-        label: a.title,
-        value: `${a.year}`,
-      }));
+      return list.map((a) => ({ id: a.id, label: a.title, value: `${a.year}` }));
     }
     case 'Songs': {
       const albumId = params?.albumId as string | undefined;
       const list = albumId ? getSongsByAlbum(albumId) : songs;
-      return list.map((s) => ({
-        id: s.id,
-        label: s.title,
-        value: formatTime(s.duration),
-        hasChildren: false,
-      }));
+      return list.map((s) => ({ id: s.id, label: s.title, value: formatTime(s.duration), hasChildren: false }));
     }
     case 'CoverFlow':
-      return albums.map((a) => ({
-        id: a.id,
-        label: a.title,
-        hasChildren: true,
-      }));
+      return albums.map((a) => ({ id: a.id, label: a.title, hasChildren: true }));
     case 'Contacts':
-      return CONTACTS_LIST.map((c) => ({
-        id: c.id,
-        label: c.name,
-        hasChildren: false,
-      }));
+      return CONTACTS_LIST.map((c) => ({ id: c.id, label: c.name, hasChildren: false }));
     case 'ThemeSelect':
-      return Object.entries(themes).map(([key, t]) => ({
-        id: key,
-        label: t.name,
-        hasChildren: false,
-      }));
+      return Object.entries(themes).map(([key, t]) => ({ id: key, label: t.name, hasChildren: false }));
     default:
       return [];
   }
@@ -135,14 +132,21 @@ function getScreenTitle(route: Route, params?: Record<string, unknown>): string 
   const { artists, albums } = useLibraryStore.getState();
 
   switch (route) {
-    case 'MainMenu':     return 'iPod';
-    case 'Music':        return 'Music';
-    case 'Photos':       return 'Photos';
-    case 'Slideshows':   return 'Slideshows';
-    case 'Videos':       return 'Videos';
-    case 'Extras':       return 'Extras';
-    case 'Settings':     return 'Settings';
-    case 'Artists':      return 'Artists';
+    case 'MainMenu':        return 'iPod';
+    case 'Music':           return 'Music';
+    case 'Photos':          return 'Photos';
+    case 'PhotoLibrary':    return 'Photo Library';
+    case 'Slideshows':      return 'Slideshows';
+    case 'SlideshowPlay':   return 'Slideshow';
+    case 'Videos':          return 'Videos';
+    case 'MoviesList':      return 'Movies';
+    case 'MusicVideosList': return 'Music Videos';
+    case 'TVShowsList':     return 'TV Shows';
+    case 'VideoPlaylists':  return 'Video Playlists';
+    case 'VideoPlayer':     return 'Now Playing';
+    case 'Extras':          return 'Extras';
+    case 'Settings':        return 'Settings';
+    case 'Artists':         return 'Artists';
     case 'Albums': {
       const artistId = params?.artistId as string | undefined;
       if (artistId) {
@@ -159,16 +163,22 @@ function getScreenTitle(route: Route, params?: Record<string, unknown>): string 
       }
       return 'Songs';
     }
-    case 'NowPlaying':   return 'Now Playing';
-    case 'CoverFlow':    return 'Cover Flow';
-    case 'Clock':        return 'Clock';
-    case 'Stopwatch':    return 'Stopwatch';
-    case 'Games':        return 'Games';
-    case 'Contacts':     return 'Contacts';
-    case 'ThemeSelect':  return 'Theme';
-    case 'About':        return 'About';
-    default:             return '';
+    case 'NowPlaying':      return 'Now Playing';
+    case 'CoverFlow':       return 'Cover Flow';
+    case 'Clock':           return 'Clock';
+    case 'Stopwatch':       return 'Stopwatch';
+    case 'Games':           return 'Games';
+    case 'Contacts':        return 'Contacts';
+    case 'ScreenLock':      return 'Screen Lock';
+    case 'ThemeSelect':     return 'Theme';
+    case 'About':           return 'About';
+    default:                return '';
   }
+}
+
+// Helper to find a video by ID across all lists
+function findVideo(id: string) {
+  return [...MOCK_MOVIES, ...MOCK_MUSIC_VIDEOS, ...MOCK_TV_SHOWS].find((v) => v.id === id);
 }
 
 function renderScreen(
@@ -176,6 +186,7 @@ function renderScreen(
   title: string,
   items: MenuItemData[],
   selectedIndex: number,
+  params?: Record<string, unknown>,
 ) {
   switch (route) {
     case 'NowPlaying':
@@ -190,6 +201,23 @@ function renderScreen(
       return <GamesScreen />;
     case 'About':
       return <AboutScreen />;
+    case 'PhotoLibrary':
+      return <PhotoLibraryScreen />;
+    case 'SlideshowPlay':
+      return <SlideshowScreen />;
+    case 'ScreenLock':
+      return <ScreenLockScreen />;
+    case 'VideoPlayer': {
+      const videoTitle = (params?.videoTitle as string) ?? 'Video';
+      const videoDuration = (params?.videoDuration as string) ?? '0:00';
+      return <VideoPlayerScreen title={videoTitle} duration={videoDuration} />;
+    }
+    case 'MoviesList':
+      return <VideoListScreen title="Movies" videos={MOCK_MOVIES} selectedIndex={selectedIndex} />;
+    case 'MusicVideosList':
+      return <VideoListScreen title="Music Videos" videos={MOCK_MUSIC_VIDEOS} selectedIndex={selectedIndex} />;
+    case 'TVShowsList':
+      return <VideoListScreen title="TV Shows" videos={MOCK_TV_SHOWS} selectedIndex={selectedIndex} />;
     default:
       return <MenuScreen title={title} items={items} selectedIndex={selectedIndex} />;
   }
@@ -201,19 +229,13 @@ export function NavigationStack() {
   const prevRouteRef = useRef(currentRoute.key);
 
   const loadLibrary = useLibraryStore((s) => s.loadLibrary);
-  useEffect(() => {
-    loadLibrary();
-  }, [loadLibrary]);
+  useEffect(() => { loadLibrary(); }, [loadLibrary]);
 
   useEffect(() => {
     if (prevRouteRef.current !== currentRoute.key) {
       const fromValue = direction === 'push' ? 1 : -1;
       slideAnim.setValue(fromValue);
-      RNAnimated.timing(slideAnim, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }).start();
+      RNAnimated.timing(slideAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start();
       prevRouteRef.current = currentRoute.key;
     }
   }, [currentRoute.key, direction, slideAnim]);
@@ -228,24 +250,16 @@ export function NavigationStack() {
 
   return (
     <View style={styles.container}>
-      <RNAnimated.View
-        style={[
-          styles.screen,
-          { transform: [{ translateX }] },
-        ]}
-      >
-        {renderScreen(currentRoute.route, title, items, currentRoute.selectedIndex)}
+      <RNAnimated.View style={[styles.screen, { transform: [{ translateX }] }]}>
+        {renderScreen(currentRoute.route, title, items, currentRoute.selectedIndex, currentRoute.params)}
       </RNAnimated.View>
     </View>
   );
 }
 
+export { findVideo };
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    overflow: 'hidden',
-  },
-  screen: {
-    flex: 1,
-  },
+  container: { flex: 1, overflow: 'hidden' },
+  screen: { flex: 1 },
 });
