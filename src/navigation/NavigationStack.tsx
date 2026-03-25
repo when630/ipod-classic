@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated as RNAnimated } from 'react-native';
+import { View, StyleSheet, Animated as RNAnimated, Easing } from 'react-native';
 import { useNavigation } from './NavigationContext';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { dimensions } from '@/theme/dimensions';
@@ -235,7 +235,13 @@ export function NavigationStack() {
     if (prevRouteRef.current !== currentRoute.key) {
       const fromValue = direction === 'push' ? 1 : -1;
       slideAnim.setValue(fromValue);
-      RNAnimated.timing(slideAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start();
+      RNAnimated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 20,
+        stiffness: 200,
+        mass: 0.8,
+      }).start();
       prevRouteRef.current = currentRoute.key;
     }
   }, [currentRoute.key, direction, slideAnim]);

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useTheme } from '@/theme/ThemeContext';
 import { formatTime } from '@/utils/formatTime';
 
@@ -11,28 +11,40 @@ interface ProgressBarProps {
 export function ProgressBar({ position, duration }: ProgressBarProps) {
   const { theme } = useTheme();
   const progress = duration > 0 ? Math.min(position / duration, 1) : 0;
+  const animProgress = useRef(new Animated.Value(progress)).current;
+
+  useEffect(() => {
+    Animated.timing(animProgress, {
+      toValue: progress,
+      duration: 400,
+      useNativeDriver: false,
+    }).start();
+  }, [progress, animProgress]);
+
+  const fillWidth = animProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
+
+  const scrubberLeft = animProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
 
   return (
     <View style={styles.container}>
       <View style={styles.barRow}>
         <View style={[styles.barBackground, { backgroundColor: theme.screen.text + '30' }]}>
-          <View
+          <Animated.View
             style={[
               styles.barFill,
-              {
-                backgroundColor: theme.screen.text,
-                width: `${progress * 100}%`,
-              },
+              { backgroundColor: theme.screen.text, width: fillWidth },
             ]}
           />
-          {/* Diamond scrubber */}
-          <View
+          <Animated.View
             style={[
               styles.scrubber,
-              {
-                left: `${progress * 100}%`,
-                backgroundColor: theme.screen.text,
-              },
+              { left: scrubberLeft, backgroundColor: theme.screen.text },
             ]}
           />
         </View>
@@ -50,23 +62,10 @@ export function ProgressBar({ position, duration }: ProgressBarProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    paddingHorizontal: 10,
-  },
-  barRow: {
-    height: 12,
-    justifyContent: 'center',
-  },
-  barBackground: {
-    height: 3,
-    borderRadius: 1.5,
-    overflow: 'visible',
-  },
-  barFill: {
-    height: '100%',
-    borderRadius: 1.5,
-  },
+  container: { width: '100%', paddingHorizontal: 10 },
+  barRow: { height: 12, justifyContent: 'center' },
+  barBackground: { height: 3, borderRadius: 1.5, overflow: 'visible' },
+  barFill: { height: '100%', borderRadius: 1.5 },
   scrubber: {
     position: 'absolute',
     top: -3,
@@ -75,12 +74,6 @@ const styles = StyleSheet.create({
     height: 7,
     transform: [{ rotate: '45deg' }],
   },
-  timeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 1,
-  },
-  time: {
-    fontSize: 9,
-  },
+  timeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 1 },
+  time: { fontSize: 9 },
 });

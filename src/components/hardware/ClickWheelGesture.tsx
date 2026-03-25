@@ -1,5 +1,5 @@
-import React, { useCallback, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useCallback } from 'react';
+import { StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -8,7 +8,7 @@ import Animated, {
 import { dimensions, wheelGesture } from '@/theme/dimensions';
 import { getAngle, getDistance, angleDelta, getTapZone, degToRad } from '@/utils/angle';
 import { tickHaptic, selectHaptic } from '@/utils/haptics';
-import type { WheelEventHandler, WheelTapZone } from '@/types';
+import type { WheelTapZone } from '@/types';
 
 interface ClickWheelGestureProps {
   onScroll?: (direction: 'up' | 'down') => void;
@@ -24,13 +24,11 @@ export function ClickWheelGesture({ onScroll, onTap, onHold }: ClickWheelGesture
 
   const tickThreshold = degToRad(wheelGesture.tickThresholdDegrees);
 
-  // Shared values for worklet-based gesture processing
   const previousAngle = useSharedValue(0);
   const accumulatedAngle = useSharedValue(0);
   const isScrolling = useSharedValue(false);
-
-  // Long press timer
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track whether any scroll ticks fired during this gesture
+  const didScroll = useSharedValue(false);
 
   const emitScrollUp = useCallback(() => {
     tickHaptic();
@@ -47,18 +45,24 @@ export function ClickWheelGesture({ onScroll, onTap, onHold }: ClickWheelGesture
     onTap?.(zone);
   }, [onTap]);
 
+  const emitHold = useCallback((zone: WheelTapZone) => {
+    selectHaptic();
+    onHold?.(zone);
+  }, [onHold]);
+
   // Pan gesture for circular scrolling
   const panGesture = Gesture.Pan()
+    .minDistance(3)
     .onStart((e) => {
       const dist = getDistance(e.x, e.y, cx, cy);
 
-      // Only start scrolling if touch is on the ring (not center, not outside)
       if (dist < wheel.centerRadius || dist > wheel.radius) {
         isScrolling.value = false;
         return;
       }
 
       isScrolling.value = true;
+      didScroll.value = false;
       previousAngle.value = getAngle(e.x, e.y, cx, cy);
       accumulatedAngle.value = 0;
     })
@@ -70,13 +74,14 @@ export function ClickWheelGesture({ onScroll, onTap, onHold }: ClickWheelGesture
 
       accumulatedAngle.value += delta;
 
-      // Emit ticks when accumulated angle exceeds threshold
       while (accumulatedAngle.value >= tickThreshold) {
         accumulatedAngle.value -= tickThreshold;
+        didScroll.value = true;
         runOnJS(emitScrollDown)();
       }
       while (accumulatedAngle.value <= -tickThreshold) {
         accumulatedAngle.value += tickThreshold;
+        didScroll.value = true;
         runOnJS(emitScrollUp)();
       }
 
@@ -86,38 +91,49 @@ export function ClickWheelGesture({ onScroll, onTap, onHold }: ClickWheelGesture
       isScrolling.value = false;
     });
 
-  // Tap gesture for button zones
+  // Tap gesture — only fires if we didn't scroll
   const tapGesture = Gesture.Tap()
+    .maxDuration(300)
+    .onBegin(() => {
+      didScroll.value = false;
+    })
     .onEnd((e) => {
+      // If a scroll happened during this touch, suppress the tap
+      if (didScroll.value) return;
+
       const dist = getDistance(e.x, e.y, cx, cy);
 
       if (dist <= wheel.centerRadius) {
-        // Center button = select
         runOnJS(emitTap)('select');
       } else if (dist <= wheel.radius) {
-        // Ring area = directional buttons
         const angle = getAngle(e.x, e.y, cx, cy);
         const zone = getTapZone(angle);
         runOnJS(emitTap)(zone);
       }
     });
 
-  // Long press gesture
+  // Long press gesture — also suppressed if scrolling
   const longPressGesture = Gesture.LongPress()
     .minDuration(wheelGesture.longPressMs)
+    .onBegin(() => {
+      didScroll.value = false;
+    })
     .onEnd((e) => {
+      if (didScroll.value) return;
+
       const dist = getDistance(e.x, e.y, cx, cy);
 
       if (dist <= wheel.centerRadius) {
-        runOnJS(onHold ?? (() => {}))('select');
+        runOnJS(emitHold)('select');
       } else if (dist <= wheel.radius) {
         const angle = getAngle(e.x, e.y, cx, cy);
         const zone = getTapZone(angle);
-        runOnJS(onHold ?? (() => {}))(zone);
+        runOnJS(emitHold)(zone);
       }
     });
 
-  // Combine gestures: tap and long press are exclusive, pan is simultaneous
+  // Race: long press vs (pan + tap simultaneously)
+  // Pan and tap run together, but tap checks didScroll flag
   const composed = Gesture.Race(
     longPressGesture,
     Gesture.Simultaneous(panGesture, tapGesture)
@@ -143,6 +159,5 @@ export function ClickWheelGesture({ onScroll, onTap, onHold }: ClickWheelGesture
 const styles = StyleSheet.create({
   gestureArea: {
     position: 'absolute',
-    // Transparent - gestures only, no visual
   },
 });

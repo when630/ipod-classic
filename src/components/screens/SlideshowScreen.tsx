@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { IPodStatusBar } from '@/components/ui/StatusBar';
 import { useTheme } from '@/theme/ThemeContext';
@@ -23,10 +23,10 @@ export function SlideshowScreen() {
   useEffect(() => {
     const timer = setInterval(() => {
       Animated.sequence([
-        Animated.timing(fadeAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
-        Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(fadeAnim, { toValue: 0, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 600, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
       ]).start();
-      setTimeout(() => setIndex((i) => (i + 1) % SLIDES.length), 400);
+      setTimeout(() => setIndex((i) => (i + 1) % SLIDES.length), 500);
     }, 3000);
     return () => clearInterval(timer);
   }, [fadeAnim]);

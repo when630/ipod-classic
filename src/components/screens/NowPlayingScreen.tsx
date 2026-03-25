@@ -31,26 +31,25 @@ export function NowPlayingScreen() {
       <View style={styles.divider} />
 
       <View style={styles.content}>
-        {/* Track number & count */}
-        <Text style={[styles.trackCount, { color: theme.screen.text }]}>
-          {currentTrack.trackNumber} of {usePlayerStore.getState().queue.length}
-        </Text>
-
-        {/* Album art placeholder */}
-        <View style={[styles.albumArt, { backgroundColor: theme.screen.text + '15' }]}>
-          <Ionicons name="musical-notes" size={36} color={theme.screen.text + '40'} />
+        {/* Top section: track count + album art */}
+        <View style={styles.topSection}>
+          <Text style={[styles.trackCount, { color: theme.screen.text }]}>
+            {currentTrack.trackNumber} of {usePlayerStore.getState().queue.length}
+          </Text>
+          <View style={[styles.albumArt, { backgroundColor: theme.screen.text + '15' }]}>
+            <Ionicons name="musical-notes" size={28} color={theme.screen.text + '40'} />
+          </View>
         </View>
 
         {/* Track info */}
-        <Text style={[styles.title, { color: theme.screen.text }]} numberOfLines={1}>
-          {currentTrack.title}
-        </Text>
-        <Text style={[styles.artist, { color: theme.screen.text }]} numberOfLines={1}>
-          {currentTrack.artistName}
-        </Text>
-        <Text style={[styles.album, { color: theme.screen.text }]} numberOfLines={1}>
-          {currentTrack.albumTitle}
-        </Text>
+        <View style={styles.trackInfo}>
+          <Text style={[styles.title, { color: theme.screen.text }]} numberOfLines={1}>
+            {currentTrack.title}
+          </Text>
+          <Text style={[styles.artist, { color: theme.screen.text }]} numberOfLines={1}>
+            {currentTrack.artistName} — {currentTrack.albumTitle}
+          </Text>
+        </View>
 
         {/* Progress bar */}
         <ProgressBar position={position} duration={duration} />
@@ -88,9 +87,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    alignItems: 'center',
-    paddingTop: 4,
-    paddingBottom: 6,
+    paddingTop: 3,
+    paddingBottom: 5,
     justifyContent: 'space-between',
   },
   empty: {
@@ -102,41 +100,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.5,
   },
+  topSection: {
+    alignItems: 'center',
+    gap: 2,
+  },
   trackCount: {
     fontSize: 9,
     opacity: 0.6,
   },
   albumArt: {
-    width: 80,
-    height: 80,
-    borderRadius: 4,
+    width: 60,
+    height: 60,
+    borderRadius: 3,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: {
-    fontSize: 13,
-    fontWeight: '700',
+  trackInfo: {
+    alignItems: 'center',
     paddingHorizontal: 10,
+    gap: 1,
+  },
+  title: {
+    fontSize: 12,
+    fontWeight: '700',
     textAlign: 'center',
   },
   artist: {
-    fontSize: 11,
-    opacity: 0.8,
-    paddingHorizontal: 10,
-    textAlign: 'center',
-    marginTop: -2,
-  },
-  album: {
     fontSize: 10,
-    opacity: 0.6,
-    paddingHorizontal: 10,
+    opacity: 0.7,
     textAlign: 'center',
-    marginTop: -2,
   },
   indicators: {
     flexDirection: 'row',
+    justifyContent: 'center',
     gap: 8,
-    height: 12,
+    height: 10,
     alignItems: 'center',
   },
   indicatorRow: {

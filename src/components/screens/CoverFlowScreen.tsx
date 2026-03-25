@@ -1,8 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { CoverFlowItem } from '@/components/coverflow/CoverFlowItem';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { useTheme } from '@/theme/ThemeContext';
 import { dimensions } from '@/theme/dimensions';
 
 interface CoverFlowScreenProps {
@@ -14,11 +13,24 @@ const SIDE_COVER_SIZE = 55;
 const SIDE_OFFSET = 68;
 const FAR_OFFSET = 108;
 const ROTATE_Y = 60;
+const VISIBLE_RANGE = 2;
+
+const centerX = dimensions.lcd.width / 2;
+const centerY = dimensions.lcd.height * 0.35;
 
 export function CoverFlowScreen({ selectedIndex }: CoverFlowScreenProps) {
-  const { theme } = useTheme();
   const albums = useLibraryStore((s) => s.albums);
-  const centerAlbum = albums[selectedIndex];
+  const animValue = useRef(new Animated.Value(selectedIndex)).current;
+
+  useEffect(() => {
+    Animated.spring(animValue, {
+      toValue: selectedIndex,
+      useNativeDriver: true,
+      damping: 18,
+      stiffness: 180,
+      mass: 0.6,
+    }).start();
+  }, [selectedIndex, animValue]);
 
   if (albums.length === 0) {
     return (
@@ -28,56 +40,51 @@ export function CoverFlowScreen({ selectedIndex }: CoverFlowScreenProps) {
     );
   }
 
-  // Show up to 2 albums on each side + center
-  const indices = [];
-  for (let i = selectedIndex - 2; i <= selectedIndex + 2; i++) {
-    if (i >= 0 && i < albums.length) {
-      indices.push(i);
-    }
+  // Render a wider range so items animate in/out
+  const indices: number[] = [];
+  for (let i = selectedIndex - VISIBLE_RANGE - 1; i <= selectedIndex + VISIBLE_RANGE + 1; i++) {
+    if (i >= 0 && i < albums.length) indices.push(i);
   }
 
-  const centerX = dimensions.lcd.width / 2;
-  const centerY = dimensions.lcd.height * 0.35;
+  const centerAlbum = albums[selectedIndex];
 
   return (
     <View style={[styles.container, { backgroundColor: '#1A1A1A' }]}>
-      {/* Album covers */}
       <View style={styles.carousel}>
         {indices.map((i) => {
-          const offset = i - selectedIndex;
-          const isCenter = offset === 0;
-          const isFar = Math.abs(offset) === 2;
-          const size = isCenter ? COVER_SIZE : SIDE_COVER_SIZE;
+          // offset relative to animated center
+          const offset = Animated.subtract(i, animValue);
 
-          let translateX = 0;
-          let rotateY = '0deg';
-          let zIndex = 0;
-          let opacity = 1;
+          const translateX = offset.interpolate({
+            inputRange: [-2, -1, 0, 1, 2],
+            outputRange: [-FAR_OFFSET, -SIDE_OFFSET, 0, SIDE_OFFSET, FAR_OFFSET],
+            extrapolate: 'clamp',
+          });
 
-          if (offset === 0) {
-            zIndex = 10;
-          } else if (offset === -1) {
-            translateX = -SIDE_OFFSET;
-            rotateY = `${ROTATE_Y}deg`;
-            zIndex = 5;
-          } else if (offset === 1) {
-            translateX = SIDE_OFFSET;
-            rotateY = `-${ROTATE_Y}deg`;
-            zIndex = 5;
-          } else if (offset === -2) {
-            translateX = -FAR_OFFSET;
-            rotateY = `${ROTATE_Y}deg`;
-            zIndex = 1;
-            opacity = 0.5;
-          } else if (offset === 2) {
-            translateX = FAR_OFFSET;
-            rotateY = `-${ROTATE_Y}deg`;
-            zIndex = 1;
-            opacity = 0.5;
-          }
+          const rotateY = offset.interpolate({
+            inputRange: [-2, -1, 0, 1, 2],
+            outputRange: [`${ROTATE_Y}deg`, `${ROTATE_Y}deg`, '0deg', `-${ROTATE_Y}deg`, `-${ROTATE_Y}deg`],
+            extrapolate: 'clamp',
+          });
+
+          const scale = offset.interpolate({
+            inputRange: [-2, -1, 0, 1, 2],
+            outputRange: [0.6, 0.75, 1, 0.75, 0.6],
+            extrapolate: 'clamp',
+          });
+
+          const opacity = offset.interpolate({
+            inputRange: [-3, -2, -1, 0, 1, 2, 3],
+            outputRange: [0, 0.5, 0.9, 1, 0.9, 0.5, 0],
+            extrapolate: 'clamp',
+          });
+
+          // z-ordering via translateZ doesn't work on RN, use static zIndex
+          const staticOffset = i - selectedIndex;
+          const zIndex = 10 - Math.abs(staticOffset);
 
           return (
-            <View
+            <Animated.View
               key={albums[i].id}
               style={[
                 styles.coverWrapper,
@@ -86,11 +93,12 @@ export function CoverFlowScreen({ selectedIndex }: CoverFlowScreenProps) {
                   opacity,
                   transform: [
                     { translateX },
-                    { perspective: 300 },
+                    { perspective: 400 },
                     { rotateY },
+                    { scale },
                   ],
-                  left: centerX - size / 2,
-                  top: centerY - size / 2,
+                  left: centerX - COVER_SIZE / 2,
+                  top: centerY - COVER_SIZE / 2,
                 },
               ]}
             >
@@ -98,14 +106,13 @@ export function CoverFlowScreen({ selectedIndex }: CoverFlowScreenProps) {
                 title={albums[i].title}
                 artistName={albums[i].artistName}
                 index={i}
-                size={size}
+                size={COVER_SIZE}
               />
-            </View>
+            </Animated.View>
           );
         })}
       </View>
 
-      {/* Album info at bottom */}
       {centerAlbum && (
         <View style={styles.info}>
           <Text style={styles.albumTitle} numberOfLines={1}>
@@ -121,37 +128,11 @@ export function CoverFlowScreen({ selectedIndex }: CoverFlowScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  carousel: {
-    flex: 1,
-    position: 'relative',
-  },
-  coverWrapper: {
-    position: 'absolute',
-  },
-  info: {
-    alignItems: 'center',
-    paddingBottom: 8,
-    paddingHorizontal: 10,
-  },
-  albumTitle: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  albumArtist: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 10,
-    textAlign: 'center',
-    marginTop: 1,
-  },
-  emptyText: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 40,
-  },
+  container: { flex: 1 },
+  carousel: { flex: 1, position: 'relative' },
+  coverWrapper: { position: 'absolute' },
+  info: { alignItems: 'center', paddingBottom: 8, paddingHorizontal: 10 },
+  albumTitle: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  albumArtist: { color: 'rgba(255,255,255,0.6)', fontSize: 10, textAlign: 'center', marginTop: 1 },
+  emptyText: { color: 'rgba(255,255,255,0.4)', fontSize: 12, textAlign: 'center', marginTop: 40 },
 });
