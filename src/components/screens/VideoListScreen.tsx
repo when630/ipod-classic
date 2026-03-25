@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, StyleSheet } from 'react-native';
 import { IPodStatusBar } from '@/components/ui/StatusBar';
 import { MenuItem } from '@/components/ui/MenuItem';
 import { ScrollableList } from '@/components/ui/ScrollableList';
 import { useTheme } from '@/theme/ThemeContext';
+import { useUIStore } from '@/stores/useUIStore';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import { dimensions } from '@/theme/dimensions';
 
@@ -38,7 +38,8 @@ export const MOCK_TV_SHOWS: VideoItem[] = [
   { id: 'tv5', title: 'Code Stories S01E01', duration: '50:00', type: 'tv_show' },
 ];
 
-const ITEM_HEIGHT = 26;
+const CLASSIC_ITEM_HEIGHT = 26;
+const MODERN_ITEM_HEIGHT = 36;
 
 interface VideoListScreenProps {
   title: string;
@@ -48,16 +49,22 @@ interface VideoListScreenProps {
 
 export function VideoListScreen({ title, videos, selectedIndex }: VideoListScreenProps) {
   const { theme } = useTheme();
+  const uiStyle = useUIStore((s) => s.uiStyle);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
+  const isModern = uiStyle === 'modern';
+  const itemHeight = isModern ? MODERN_ITEM_HEIGHT : CLASSIC_ITEM_HEIGHT;
+  const statusBarHeight = isModern ? 22 : 18;
+  const bg = isModern ? theme.modern.background : theme.screen.background;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.screen.background }]}>
+    <View style={[styles.container, { backgroundColor: bg }]}>
       <IPodStatusBar title={title} isPlaying={isPlaying} />
-      <View style={styles.divider} />
+      {!isModern && <View style={styles.divider} />}
+      {isModern && <View style={{ height: 2 }} />}
       <ScrollableList
         selectedIndex={selectedIndex}
-        itemHeight={ITEM_HEIGHT}
-        visibleItems={Math.floor((dimensions.lcd.height - 19) / ITEM_HEIGHT)}
+        itemHeight={itemHeight}
+        visibleItems={Math.floor((dimensions.lcd.height - statusBarHeight - 2) / itemHeight)}
       >
         {videos.map((video, index) => (
           <MenuItem

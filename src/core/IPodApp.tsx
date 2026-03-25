@@ -11,13 +11,16 @@ import { usePlayerStore } from '@/stores/usePlayerStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { useTheme } from '@/theme/ThemeContext';
 import { useKeyboardControls } from '@/hooks/useKeyboardControls';
+import { useUIStore } from '@/stores/useUIStore';
 import { findVideo } from '@/navigation/NavigationStack';
 import type { WheelTapZone } from '@/types';
+import type { UIStyle } from '@/stores/useUIStore';
 
 function IPodDevice() {
   const { currentRoute, push, pop, popToRoot, setSelectedIndex } = useNavigation();
   const { togglePlayPause, next, previous, adjustVolume, currentTrack } = usePlayerStore();
   const { setThemeKey } = useTheme();
+  const setUIStyle = useUIStore((s) => s.setUIStyle);
 
   const handleScroll = useCallback(
     (direction: 'up' | 'down') => {
@@ -27,10 +30,13 @@ function IPodDevice() {
         return;
       }
 
-      // Games: scroll = change snake direction
+      // Games: scroll = cycle through directions (up→right→down→left→up...)
       if (currentRoute.route === 'Games') {
-        if (direction === 'up') (globalThis as any).__snake?.up();
-        else (globalThis as any).__snake?.down();
+        const snake = (globalThis as any).__snake;
+        if (snake) {
+          if (direction === 'up') snake.rotateCCW();
+          else snake.rotateCW();
+        }
         return;
       }
 
@@ -133,6 +139,16 @@ function IPodDevice() {
             return;
           }
 
+          // UIStyleSelect → apply UI style
+          if (currentRoute.route === 'UIStyleSelect') {
+            const items = getMenuItemsForRoute(currentRoute.route, currentRoute.params);
+            const selected = items[currentRoute.selectedIndex];
+            if (selected) {
+              setUIStyle(selected.id as UIStyle);
+            }
+            return;
+          }
+
           // On CoverFlow, select → album songs
           if (currentRoute.route === 'CoverFlow') {
             const albums = useLibraryStore.getState().albums;
@@ -214,7 +230,11 @@ function IPodDevice() {
   );
 
   // Web: keyboard arrow keys / Enter / Escape / Space
-  useKeyboardControls({ onScroll: handleScroll, onTap: handleTap });
+  useKeyboardControls({
+    onScroll: handleScroll,
+    onTap: handleTap,
+    gameMode: currentRoute.route === 'Games',
+  });
 
   return (
     <View style={styles.container}>

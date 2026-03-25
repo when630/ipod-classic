@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { CoverFlowItem } from '@/components/coverflow/CoverFlowItem';
 import { useLibraryStore } from '@/stores/useLibraryStore';
+import { useTheme } from '@/theme/ThemeContext';
+import { useUIStore } from '@/stores/useUIStore';
 import { dimensions } from '@/theme/dimensions';
 
 interface CoverFlowScreenProps {
@@ -19,7 +21,11 @@ const centerX = dimensions.lcd.width / 2;
 const centerY = dimensions.lcd.height * 0.35;
 
 export function CoverFlowScreen({ selectedIndex }: CoverFlowScreenProps) {
+  const { theme } = useTheme();
+  const uiStyle = useUIStore((s) => s.uiStyle);
   const albums = useLibraryStore((s) => s.albums);
+  const isModern = uiStyle === 'modern';
+  const m = theme.modern;
   const animValue = useRef(new Animated.Value(selectedIndex)).current;
 
   useEffect(() => {
@@ -34,8 +40,8 @@ export function CoverFlowScreen({ selectedIndex }: CoverFlowScreenProps) {
 
   if (albums.length === 0) {
     return (
-      <View style={[styles.container, { backgroundColor: '#1A1A1A' }]}>
-        <Text style={styles.emptyText}>No albums</Text>
+      <View style={[styles.container, { backgroundColor: isModern ? m.background : '#1A1A1A' }]}>
+        <Text style={[styles.emptyText, { color: isModern ? m.secondaryText : '#FFF' }]}>No albums</Text>
       </View>
     );
   }
@@ -49,7 +55,7 @@ export function CoverFlowScreen({ selectedIndex }: CoverFlowScreenProps) {
   const centerAlbum = albums[selectedIndex];
 
   return (
-    <View style={[styles.container, { backgroundColor: '#1A1A1A' }]}>
+    <View style={[styles.container, { backgroundColor: isModern ? m.background : '#1A1A1A' }]}>
       <View style={styles.carousel}>
         {indices.map((i) => {
           // offset relative to animated center
@@ -115,10 +121,10 @@ export function CoverFlowScreen({ selectedIndex }: CoverFlowScreenProps) {
 
       {centerAlbum && (
         <View style={styles.info}>
-          <Text style={styles.albumTitle} numberOfLines={1}>
+          <Text style={[styles.albumTitle, { color: isModern ? m.text : '#FFF' }]} numberOfLines={1}>
             {centerAlbum.title}
           </Text>
-          <Text style={styles.albumArtist} numberOfLines={1}>
+          <Text style={[styles.albumArtist, { color: isModern ? m.secondaryText : 'rgba(255,255,255,0.6)' }]} numberOfLines={1}>
             {centerAlbum.artistName}
           </Text>
         </View>
@@ -132,7 +138,7 @@ const styles = StyleSheet.create({
   carousel: { flex: 1, position: 'relative' },
   coverWrapper: { position: 'absolute' },
   info: { alignItems: 'center', paddingBottom: 8, paddingHorizontal: 10 },
-  albumTitle: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  albumArtist: { color: 'rgba(255,255,255,0.6)', fontSize: 10, textAlign: 'center', marginTop: 1 },
-  emptyText: { color: 'rgba(255,255,255,0.4)', fontSize: 12, textAlign: 'center', marginTop: 40 },
+  albumTitle: { fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  albumArtist: { fontSize: 10, textAlign: 'center', marginTop: 1 },
+  emptyText: { fontSize: 12, textAlign: 'center', marginTop: 40, opacity: 0.4 },
 });

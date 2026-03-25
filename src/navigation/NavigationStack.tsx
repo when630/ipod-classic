@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Animated as RNAnimated, Easing } from 'react-native';
 import { useNavigation } from './NavigationContext';
 import { useLibraryStore } from '@/stores/useLibraryStore';
@@ -25,7 +25,7 @@ import { ScreenLockScreen } from '@/components/screens/ScreenLockScreen';
 import { themes } from '@/theme/colors';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 import type { MenuItemData } from '@/components/screens/MenuScreen';
-import type { Route } from './types';
+import type { Route, RouteEntry } from './types';
 
 const MUSIC_MENU_ITEMS: MenuItemData[] = [
   { id: 'cover_flow', label: 'Cover Flow' },
@@ -67,9 +67,12 @@ const EXTRAS_MENU_ITEMS: MenuItemData[] = [
 
 function getSettingsItems(): MenuItemData[] {
   const { shuffleMode, repeatMode } = usePlayerStore.getState();
+  const { useUIStore } = require('@/stores/useUIStore');
+  const uiStyle = useUIStore.getState().uiStyle;
   return [
     { id: 'about', label: 'About' },
     { id: 'theme', label: 'Theme' },
+    { id: 'ui_style', label: 'UI Style', value: uiStyle === 'modern' ? 'Modern' : 'Classic' },
     { id: 'shuffle', label: 'Shuffle', value: shuffleMode ? 'On' : 'Off', hasChildren: false },
     { id: 'repeat', label: 'Repeat', value: repeatMode === 'off' ? 'Off' : repeatMode === 'all' ? 'All' : 'One', hasChildren: false },
   ];
@@ -123,6 +126,11 @@ export function getMenuItemsForRoute(
       return CONTACTS_LIST.map((c) => ({ id: c.id, label: c.name, hasChildren: false }));
     case 'ThemeSelect':
       return Object.entries(themes).map(([key, t]) => ({ id: key, label: t.name, hasChildren: false }));
+    case 'UIStyleSelect':
+      return [
+        { id: 'classic', label: 'Classic', hasChildren: false },
+        { id: 'modern', label: 'Modern iOS', hasChildren: false },
+      ];
     default:
       return [];
   }
@@ -171,12 +179,12 @@ function getScreenTitle(route: Route, params?: Record<string, unknown>): string 
     case 'Contacts':        return 'Contacts';
     case 'ScreenLock':      return 'Screen Lock';
     case 'ThemeSelect':     return 'Theme';
+    case 'UIStyleSelect':   return 'UI Style';
     case 'About':           return 'About';
     default:                return '';
   }
 }
 
-// Helper to find a video by ID across all lists
 function findVideo(id: string) {
   return [...MOCK_MOVIES, ...MOCK_MUSIC_VIDEOS, ...MOCK_TV_SHOWS].find((v) => v.id === id);
 }
@@ -223,41 +231,102 @@ function renderScreen(
   }
 }
 
+function renderRouteEntry(entry: RouteEntry) {
+  const items = getMenuItemsForRoute(entry.route, entry.params);
+  const title = getScreenTitle(entry.route, entry.params);
+  return renderScreen(entry.route, title, items, entry.selectedIndex, entry.params);
+}
+
+const ANIM_DURATION = 280;
+const lcdWidth = dimensions.lcd.width;
+
 export function NavigationStack() {
-  const { currentRoute, direction } = useNavigation();
-  const slideAnim = useRef(new RNAnimated.Value(0)).current;
-  const prevRouteRef = useRef(currentRoute.key);
+  const { currentRoute, direction, prevRoute, clearPrevRoute } = useNavigation();
+  const slideAnim = useRef(new RNAnimated.Value(1)).current;
+  const lastKeyRef = useRef(currentRoute.key);
+  const frozenPrevRef = useRef<RouteEntry | null>(null);
+  const frozenDirRef = useRef<'push' | 'pop'>('push');
+  const [, forceRender] = useState(0);
 
   const loadLibrary = useLibraryStore((s) => s.loadLibrary);
   useEffect(() => { loadLibrary(); }, [loadLibrary]);
 
+  // Detect route change DURING RENDER — before JSX is returned
+  // This ensures the first frame already has the transition set up
+  if (lastKeyRef.current !== currentRoute.key && prevRoute) {
+    slideAnim.stopAnimation();
+    frozenPrevRef.current = prevRoute;
+    frozenDirRef.current = direction;
+    lastKeyRef.current = currentRoute.key;
+    slideAnim.setValue(0);
+  } else if (lastKeyRef.current !== currentRoute.key) {
+    lastKeyRef.current = currentRoute.key;
+  }
+
+  // Start the animation after render (useEffect), but the visual state
+  // is already correct from the synchronous setup above
   useEffect(() => {
-    if (prevRouteRef.current !== currentRoute.key) {
-      const fromValue = direction === 'push' ? 1 : -1;
-      slideAnim.setValue(fromValue);
-      RNAnimated.spring(slideAnim, {
-        toValue: 0,
+    if (frozenPrevRef.current !== null) {
+      RNAnimated.timing(slideAnim, {
+        toValue: 1,
+        duration: ANIM_DURATION,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
-        damping: 20,
-        stiffness: 200,
-        mass: 0.8,
-      }).start();
-      prevRouteRef.current = currentRoute.key;
+      }).start(() => {
+        frozenPrevRef.current = null;
+        clearPrevRoute();
+        forceRender((n) => n + 1);
+      });
     }
-  }, [currentRoute.key, direction, slideAnim]);
+  }, [currentRoute.key]);
 
-  const items = getMenuItemsForRoute(currentRoute.route, currentRoute.params);
-  const title = getScreenTitle(currentRoute.route, currentRoute.params);
+  const frozenPrev = frozenPrevRef.current;
+  const isPush = frozenDirRef.current === 'push';
+  const isTransitioning = frozenPrev !== null;
 
-  const translateX = slideAnim.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: [-dimensions.lcd.width, 0, dimensions.lcd.width],
+  // Push: new screen slides in from right, old slides slightly left
+  // Pop: old screen slides out to right, new revealed from slight left
+  const incomingTranslateX = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [lcdWidth, 0],
+  });
+  const outgoingTranslateX = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -lcdWidth * 0.3],
+  });
+  const popOutTranslateX = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, lcdWidth],
+  });
+  const popRevealTranslateX = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-lcdWidth * 0.3, 0],
   });
 
   return (
     <View style={styles.container}>
-      <RNAnimated.View style={[styles.screen, { transform: [{ translateX }] }]}>
-        {renderScreen(currentRoute.route, title, items, currentRoute.selectedIndex, currentRoute.params)}
+      {/* Bottom layer */}
+      {isTransitioning && (
+        <RNAnimated.View
+          style={[
+            styles.screenAbsolute,
+            { transform: [{ translateX: isPush ? outgoingTranslateX : popRevealTranslateX }] },
+          ]}
+        >
+          {renderRouteEntry(isPush ? frozenPrev : currentRoute)}
+        </RNAnimated.View>
+      )}
+
+      {/* Top layer — always rendered, always absolute */}
+      <RNAnimated.View
+        style={[
+          styles.screenAbsolute,
+          isTransitioning
+            ? { transform: [{ translateX: isPush ? incomingTranslateX : popOutTranslateX }] }
+            : undefined,
+        ]}
+      >
+        {renderRouteEntry(isTransitioning && !isPush ? frozenPrev : currentRoute)}
       </RNAnimated.View>
     </View>
   );
@@ -267,5 +336,11 @@ export { findVideo };
 
 const styles = StyleSheet.create({
   container: { flex: 1, overflow: 'hidden' },
-  screen: { flex: 1 },
+  screenAbsolute: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
 });

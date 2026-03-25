@@ -1,50 +1,39 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { IPodStatusBar } from '@/components/ui/StatusBar';
 import { useTheme } from '@/theme/ThemeContext';
+import { useUIStore } from '@/stores/useUIStore';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 
-/**
- * Stopwatch controlled by the click wheel:
- * - Play/Pause button = start/stop
- * - Center button = lap / reset (when stopped)
- */
 export function StopwatchScreen() {
   const { theme } = useTheme();
+  const uiStyle = useUIStore((s) => s.uiStyle);
   const isPlayingMusic = usePlayerStore((s) => s.isPlaying);
-  const [elapsed, setElapsed] = useState(0); // ms
+  const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const [laps, setLaps] = useState<number[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(0);
+  const isModern = uiStyle === 'modern';
+  const m = theme.modern;
 
   useEffect(() => {
     if (running) {
       startTimeRef.current = Date.now() - elapsed;
-      intervalRef.current = setInterval(() => {
-        setElapsed(Date.now() - startTimeRef.current);
-      }, 50);
+      intervalRef.current = setInterval(() => setElapsed(Date.now() - startTimeRef.current), 50);
     } else if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [running]);
 
-  // Expose toggle/lap methods via global for IPodApp to call
-  // We use a ref-based approach stored on the component
   useEffect(() => {
     (globalThis as any).__stopwatch = {
       toggle: () => setRunning((r) => !r),
       lapOrReset: () => {
-        if (running) {
-          setLaps((prev) => [elapsed, ...prev]);
-        } else {
-          setElapsed(0);
-          setLaps([]);
-        }
+        if (running) setLaps((prev) => [elapsed, ...prev]);
+        else { setElapsed(0); setLaps([]); }
       },
     };
     return () => { delete (globalThis as any).__stopwatch; };
@@ -57,33 +46,32 @@ export function StopwatchScreen() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${cents.toString().padStart(2, '0')}`;
   };
 
+  const bg = isModern ? m.background : theme.screen.background;
+  const textColor = isModern ? m.text : theme.screen.text;
+  const subColor = isModern ? m.secondaryText : theme.screen.text;
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.screen.background }]}>
+    <View style={[styles.container, { backgroundColor: bg }]}>
       <IPodStatusBar title="Stopwatch" isPlaying={isPlayingMusic} />
-      <View style={styles.divider} />
+      {!isModern && <View style={styles.divider} />}
       <View style={styles.content}>
         <Ionicons
           name={running ? 'pause-circle-outline' : 'play-circle-outline'}
           size={20}
-          color={theme.screen.text + '40'}
+          color={isModern ? m.accent + '60' : textColor + '40'}
         />
-        <Text style={[styles.time, { color: theme.screen.text }]}>
+        <Text style={[styles.time, { color: textColor }, isModern && { fontWeight: '200', fontSize: 32 }]}>
           {formatMs(elapsed)}
         </Text>
-        <Text style={[styles.hint, { color: theme.screen.text }]}>
+        <Text style={[styles.hint, { color: subColor }]}>
           {running ? 'Play/Pause: stop  |  Select: lap' : elapsed > 0 ? 'Play/Pause: start  |  Select: reset' : 'Play/Pause: start'}
         </Text>
-
         {laps.length > 0 && (
           <View style={styles.laps}>
             {laps.slice(0, 4).map((lap, i) => (
-              <View key={i} style={styles.lapRow}>
-                <Text style={[styles.lapLabel, { color: theme.screen.text }]}>
-                  Lap {laps.length - i}
-                </Text>
-                <Text style={[styles.lapTime, { color: theme.screen.text }]}>
-                  {formatMs(lap)}
-                </Text>
+              <View key={i} style={[styles.lapRow, isModern && { backgroundColor: m.groupedBackground, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }]}>
+                <Text style={[styles.lapLabel, { color: subColor }]}>Lap {laps.length - i}</Text>
+                <Text style={[styles.lapTime, { color: textColor }]}>{formatMs(lap)}</Text>
               </View>
             ))}
           </View>

@@ -24,6 +24,7 @@ export type Route =
   | 'ScreenLock'
   | 'Settings'
   | 'ThemeSelect'
+  | 'UIStyleSelect'
   | 'About';
 
 export interface RouteEntry {

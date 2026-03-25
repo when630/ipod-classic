@@ -13,6 +13,15 @@ export interface IPodTheme {
     statusBar: string;
     statusBarText: string;
   };
+  modern: {
+    background: string;
+    secondaryBackground: string;
+    text: string;
+    secondaryText: string;
+    accent: string;
+    separator: string;
+    groupedBackground: string;
+  };
   wheel: {
     ring: string;
     ringGradientEnd: string;
@@ -21,6 +30,26 @@ export interface IPodTheme {
     text: string;
   };
 }
+
+const modernLight = {
+  background: '#F2F2F7',
+  secondaryBackground: '#FFFFFF',
+  text: '#000000',
+  secondaryText: '#8E8E93',
+  accent: '#007AFF',
+  separator: '#C6C6C8',
+  groupedBackground: '#FFFFFF',
+};
+
+const modernDark = {
+  background: '#1C1C1E',
+  secondaryBackground: '#2C2C2E',
+  text: '#FFFFFF',
+  secondaryText: '#8E8E93',
+  accent: '#0A84FF',
+  separator: '#38383A',
+  groupedBackground: '#2C2C2E',
+};
 
 export const themes: Record<string, IPodTheme> = {
   'classic-silver': {
@@ -38,6 +67,7 @@ export const themes: Record<string, IPodTheme> = {
       statusBar: '#A8B8A8',
       statusBarText: '#1A1A1A',
     },
+    modern: modernLight,
     wheel: {
       ring: '#F0F0F0',
       ringGradientEnd: '#D0D0D0',
@@ -61,6 +91,7 @@ export const themes: Record<string, IPodTheme> = {
       statusBar: '#A8B8A8',
       statusBarText: '#1A1A1A',
     },
+    modern: { ...modernDark, accent: '#FF453A' },
     wheel: {
       ring: '#E53935',
       ringGradientEnd: '#B71C1C',
@@ -84,6 +115,7 @@ export const themes: Record<string, IPodTheme> = {
       statusBar: '#BFCFBF',
       statusBarText: '#1A1A1A',
     },
+    modern: modernLight,
     wheel: {
       ring: '#FFFFFF',
       ringGradientEnd: '#E0E0E0',
@@ -107,6 +139,7 @@ export const themes: Record<string, IPodTheme> = {
       statusBar: '#A8B8A8',
       statusBarText: '#1A1A1A',
     },
+    modern: modernDark,
     wheel: {
       ring: '#2A2A2A',
       ringGradientEnd: '#1A1A1A',

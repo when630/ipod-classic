@@ -5,17 +5,11 @@ import type { WheelTapZone } from '@/types';
 interface KeyboardControlsOptions {
   onScroll: (direction: 'up' | 'down') => void;
   onTap: (zone: WheelTapZone) => void;
+  /** When true, arrow left/right map to back/forward instead of menu/select */
+  gameMode?: boolean;
 }
 
-/**
- * Web-only: maps keyboard keys to iPod controls.
- *
- * Arrow Up/Down = scroll
- * Enter/Right   = select (center button)
- * Escape/Left   = menu (back)
- * Space          = play/pause
- */
-export function useKeyboardControls({ onScroll, onTap }: KeyboardControlsOptions) {
+export function useKeyboardControls({ onScroll, onTap, gameMode }: KeyboardControlsOptions) {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
 
@@ -29,13 +23,19 @@ export function useKeyboardControls({ onScroll, onTap }: KeyboardControlsOptions
           e.preventDefault();
           onScroll('down');
           break;
-        case 'Enter':
         case 'ArrowRight':
+          e.preventDefault();
+          onTap(gameMode ? 'forward' : 'select');
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          onTap(gameMode ? 'back' : 'menu');
+          break;
+        case 'Enter':
           e.preventDefault();
           onTap('select');
           break;
         case 'Escape':
-        case 'ArrowLeft':
         case 'Backspace':
           e.preventDefault();
           onTap('menu');
@@ -49,5 +49,5 @@ export function useKeyboardControls({ onScroll, onTap }: KeyboardControlsOptions
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onScroll, onTap]);
+  }, [onScroll, onTap, gameMode]);
 }

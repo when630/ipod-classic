@@ -1,12 +1,12 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { IPodStatusBar } from '@/components/ui/StatusBar';
 import { MenuItem } from '@/components/ui/MenuItem';
 import { ScrollableList } from '@/components/ui/ScrollableList';
 import { useTheme } from '@/theme/ThemeContext';
+import { useUIStore } from '@/stores/useUIStore';
 import { dimensions } from '@/theme/dimensions';
 import { usePlayerStore } from '@/stores/usePlayerStore';
-import type { WheelTapZone } from '@/types';
 
 export interface MenuItemData {
   id: string;
@@ -22,20 +22,28 @@ interface MenuScreenProps {
   onSelect?: (item: MenuItemData) => void;
 }
 
-const ITEM_HEIGHT = 26;
+const CLASSIC_ITEM_HEIGHT = 26;
+const MODERN_ITEM_HEIGHT = 36;
 
 export function MenuScreen({ title, items, selectedIndex, onSelect }: MenuScreenProps) {
   const { theme } = useTheme();
+  const uiStyle = useUIStore((s) => s.uiStyle);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
 
+  const isModern = uiStyle === 'modern';
+  const itemHeight = isModern ? MODERN_ITEM_HEIGHT : CLASSIC_ITEM_HEIGHT;
+  const statusBarHeight = isModern ? 22 : 18;
+  const bg = isModern ? theme.modern.background : theme.screen.background;
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.screen.background }]}>
+    <View style={[styles.container, { backgroundColor: bg }]}>
       <IPodStatusBar title={title} isPlaying={isPlaying} />
-      <View style={styles.divider} />
+      {!isModern && <View style={styles.divider} />}
+      {isModern && <View style={{ height: 2 }} />}
       <ScrollableList
         selectedIndex={selectedIndex}
-        itemHeight={ITEM_HEIGHT}
-        visibleItems={Math.floor((dimensions.lcd.height - 19) / ITEM_HEIGHT)}
+        itemHeight={itemHeight}
+        visibleItems={Math.floor((dimensions.lcd.height - statusBarHeight - 2) / itemHeight)}
       >
         {items.map((item, index) => (
           <MenuItem
@@ -61,7 +69,6 @@ const styles = StyleSheet.create({
   },
 });
 
-// Default main menu items for Phase 1
 export const MAIN_MENU_ITEMS: MenuItemData[] = [
   { id: 'music', label: 'Music' },
   { id: 'photos', label: 'Photos' },

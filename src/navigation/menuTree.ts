@@ -37,6 +37,7 @@ const staticRouteMap: Record<string, Route> = {
   // Settings sub-menu
   about: 'About',
   theme: 'ThemeSelect',
+  ui_style: 'UIStyleSelect',
 };
 
 export function getRouteForItem(

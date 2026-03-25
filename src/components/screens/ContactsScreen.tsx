@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { IPodStatusBar } from '@/components/ui/StatusBar';
 import { useTheme } from '@/theme/ThemeContext';
+import { useUIStore } from '@/stores/useUIStore';
 import { usePlayerStore } from '@/stores/usePlayerStore';
 
 const MOCK_CONTACTS = [
@@ -19,23 +20,30 @@ interface ContactsScreenProps {
 
 export function ContactsScreen({ selectedIndex }: ContactsScreenProps) {
   const { theme } = useTheme();
+  const uiStyle = useUIStore((s) => s.uiStyle);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const contact = MOCK_CONTACTS[selectedIndex];
+  const isModern = uiStyle === 'modern';
+  const m = theme.modern;
+
+  const bg = isModern ? m.background : theme.screen.background;
+  const textColor = isModern ? m.text : theme.screen.text;
+  const subColor = isModern ? m.secondaryText : theme.screen.text;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.screen.background }]}>
+    <View style={[styles.container, { backgroundColor: bg }]}>
       <IPodStatusBar title="Contacts" isPlaying={isPlaying} />
-      <View style={styles.divider} />
+      {!isModern && <View style={styles.divider} />}
       <View style={styles.content}>
         {contact && (
           <>
-            <View style={[styles.avatar, { backgroundColor: theme.screen.text + '15' }]}>
-              <Ionicons name="person" size={28} color={theme.screen.text + '40'} />
+            <View style={[styles.avatar, { backgroundColor: isModern ? m.accent + '20' : textColor + '15' }]}>
+              <Ionicons name="person" size={28} color={isModern ? m.accent : textColor + '40'} />
             </View>
-            <Text style={[styles.name, { color: theme.screen.text }]}>{contact.name}</Text>
+            <Text style={[styles.name, { color: textColor }]}>{contact.name}</Text>
             <View style={styles.row}>
-              <Ionicons name="call-outline" size={11} color={theme.screen.text + '80'} />
-              <Text style={[styles.phone, { color: theme.screen.text }]}>{contact.phone}</Text>
+              <Ionicons name="call-outline" size={11} color={subColor} />
+              <Text style={[styles.phone, { color: subColor }]}>{contact.phone}</Text>
             </View>
           </>
         )}
@@ -44,7 +52,6 @@ export function ContactsScreen({ selectedIndex }: ContactsScreenProps) {
   );
 }
 
-// Export contacts for NavigationStack to list
 export const CONTACTS_LIST = MOCK_CONTACTS;
 
 const styles = StyleSheet.create({
